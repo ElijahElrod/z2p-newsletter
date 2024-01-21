@@ -1,5 +1,4 @@
 use once_cell::sync::Lazy;
-use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 
@@ -76,6 +75,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
         ("name=john%20doe", "missing email"),
         ("email=john.doe%40gmail.com", "missing name"),
         ("", "missing both name and email"),
+        ("name=&email=john@gmail.com", "empty name"),
     ];
 
     for (invalid_body, err_msg) in test_cases {
@@ -118,15 +118,13 @@ async fn spawn_app() -> TestApp {
 async fn configure_db(config: &DatabaseSettings) -> PgPool {
     let mut conn = PgConnection::connect_with(&config.without_db())
         .await
-        .expect("Failed to connect to Postgres");
+        .expect("Couldn't connect to db");
 
     conn.execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
         .await
         .expect("Failed to create database.");
 
-    let conn_pool = PgPool::connect_with(&config.without_db())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let conn_pool = PgPool::connect_lazy_with(config.without_db());
 
     sqlx::migrate!("./migrations")
         .run(&conn_pool)

@@ -12,6 +12,11 @@ pub struct FormData {
     name: String,
 }
 
+#[tracing::instrument(name = "Confirming a new subscriber")]
+pub async fn confirm_subscription() -> HttpResponse {
+    HttpResponse::Created().finish()
+}
+
 #[tracing::instrument(
     name = "Adding a new subscriber",
     skip(form, conn),
@@ -21,9 +26,14 @@ pub struct FormData {
     )
 )]
 pub async fn subscribe(form: web::Form<FormData>, conn: web::Data<PgPool>) -> HttpResponse {
+    let name = match SubscriberName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+
     let new_subscriber = NewSubscriber {
         email: form.0.email,
-        name: SubscriberName::parse(form.0.name),
+        name: name,
     };
 
     match insert_subscriber(&conn, &new_subscriber).await {
@@ -47,7 +57,7 @@ async fn insert_subscriber(
         "#,
         Uuid::new_v4(),
         new_subscriber.email,
-        new_subscriber.name,
+        new_subscriber.name.as_ref(),
         Utc::now()
     )
     .execute(pool)
