@@ -28,6 +28,7 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 rustflags = ["-C", "link-arg=-fuse-ld=/opt/homebrew/opt/llvm/bin/ld64.lld"]
 
 [dependencies]
+validator = "0.16"
 unicode-segmentation = "1"
 serde-aux = "4"
 tracing = { version = "0.1", features = ["log"]}
